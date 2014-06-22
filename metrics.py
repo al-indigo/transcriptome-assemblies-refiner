@@ -18,12 +18,9 @@ def get_distances(similar_transkripts_oases_file,
     return distances_pairs_for_oases, distances_pairs_for_trinity
 
 
-def reads_for_class(o_res, o_name_index, o_dict_t_r, t_dict_r_t, t_dict, t_pairs, t_res, reads_dict):
+def reads_for_class(o_res, o_name_index, o_dict_t_r, t_dict_r_t, t_dict, t_pairs, t_res, reads_dict, top_bound, bottom_bound):
     good_reads = []
     i = 0
-
-    top_bound = 0.99
-    bottom_bound = 0.30
 
     for aln in o_res:
         if i > len(o_name_index):
