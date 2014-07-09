@@ -59,39 +59,39 @@ def get_reads_for_assembler(sam_reads_filename):
 #TODO: implement it correctly (this implementation is dumb)
 def get_assemblies(reference_filename, oases_filename, trinity_filename):
     f = open(reference_filename, "r")
-    ref = []
+    ref_transcripts = []
 
     tmp = ""
     while 1:
         l = f.readline()
         if not l:
-            ref.append(tmp)
+            ref_transcripts.append(tmp)
             tmp = ""
             break
         if l[0] != '>':
             tmp += l[:-1]
 
         else:
-            ref.append(tmp)
+            ref_transcripts.append(tmp)
             tmp = ""
 
     f.close()
 
     f = open(oases_filename, "r")
-    oases_reads = []
+    oases_transcripts = []
     oases_name_index = []
 
     tmp = ""
     while 1:
         l = f.readline()
         if not l:
-            oases_reads.append(tmp)
+            oases_transcripts.append(tmp)
             tmp = ""
             break
         if l[0] != '>':
             tmp += l[:-1]
         else:
-            oases_reads.append(tmp)
+            oases_transcripts.append(tmp)
             tmp = ""
             massive = l.split(' ')
             oases_name_index.append(massive[0][1:-1])
@@ -99,26 +99,26 @@ def get_assemblies(reference_filename, oases_filename, trinity_filename):
     f.close()
 
     f = open(trinity_filename, "r")
-    trinity_reads = []
+    trinity_transcripts = []
     trinity_name_index = []
 
     tmp = ""
     while 1:
         l = f.readline()
         if not l:
-            trinity_reads.append(tmp)
+            trinity_transcripts.append(tmp)
             tmp = ""
             break
         if l[0] != '>':
             tmp += l[:-1]
         else:
-            trinity_reads.append(tmp)
+            trinity_transcripts.append(tmp)
             tmp = ""
             massive = l.split(' ')
             trinity_name_index.append(massive[0][1:])
 
     f.close()
-    return ref, oases_reads, oases_name_index, trinity_reads, trinity_name_index
+    return ref_transcripts, oases_transcripts, oases_name_index, trinity_transcripts, trinity_name_index
 
 
 def make_index_reads_to_transcripts(reads_names, transcripts_names):

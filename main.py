@@ -14,7 +14,8 @@ def classification_cycle(kernel,
                          class_good_trinity,
                          reads_names,
                          reads_seq,
-                         fileout_suffix):
+                         fileout_suffix,
+                         is_threaded):
     #print ("thread started")
     (vectorizer_o, classifier_o) = train_classifier(class_good_oases, reads_seq, kernel, ngram, ngram)
     (vectorizer_t, classifier_t) = train_classifier(class_good_trinity, reads_seq, kernel, ngram, ngram)
@@ -22,14 +23,14 @@ def classification_cycle(kernel,
     classify(vectorizer_obj=vectorizer_o,
              classifier_obj=classifier_o,
              window_size=10000,
-             filename_out="results/oases_classified-" + str(ngram) + "-" + kernel + fileout_suffix,
+             filename_out="results/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix,
              reads_names=reads_names,
              reads_seq=reads_seq)
 
     classify(vectorizer_obj=vectorizer_t,
              classifier_obj=classifier_t,
              window_size=10000,
-             filename_out="results/trinity_classified-" + str(ngram) + "-" + kernel + fileout_suffix,
+             filename_out="results/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix,
              reads_names=reads_names,
              reads_seq=reads_seq)
 
@@ -40,58 +41,93 @@ def validation_cycle(kernel,
                      class_good_trinity,
                      reads_names,
                      reads_seq,
-                     fileout_suffix):
+                     fileout_suffix,
+                     is_threaded):
     #print ("thread started")
+    if 'count' in kernel:
+        fileout_suffix += '-degree-' + str(kernel['count']) + '-'
     oases_training_set = class_good_oases[0:int(len(class_good_oases)*0.75)]
     trinity_training_set = class_good_trinity[0:int(len(class_good_trinity)*0.75)]
     oases_test_set = class_good_oases[int(len(class_good_oases)*0.75)+1:int(len(class_good_oases)-1)]
     trinity_test_set = class_good_trinity[int(len(class_good_trinity)*0.75)+1:int(len(class_good_trinity)-1)]
 
-    (vectorizer_o, classifier_o) = train_classifier(oases_training_set, reads_seq, kernel, 2, ngram, kernel)
-    (vectorizer_t, classifier_t) = train_classifier(trinity_training_set, reads_seq, kernel, 2, ngram, kernel)
+    (vectorizer_o, classifier_o) = train_classifier(oases_training_set, reads_seq, kernel, 4, ngram)
+    (vectorizer_t, classifier_t) = train_classifier(trinity_training_set, reads_seq, kernel, 4, ngram)
 
-    process_list = []
-    p = multiprocessing.Process(target=classify, args=(vectorizer_o,
-                                                       classifier_o,
-                                                       10000,
-                                                       "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
-                                                       reads_names,
-                                                       oases_test_set))
-    process_list.append(p)
-    p.start()
+    if is_threaded:
+        process_list = []
+        p = multiprocessing.Process(target=classify, args=(vectorizer_o,
+                                                           classifier_o,
+                                                           10000,
+                                                           "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
+                                                           reads_names,
+                                                           oases_test_set))
+        process_list.append(p)
+        p.start()
 
-    p = multiprocessing.Process(target=classify, args=(vectorizer_t,
-                                                       classifier_t,
-                                                       10000,
-                                                       "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
-                                                       reads_names,
-                                                       trinity_test_set))
-    process_list.append(p)
-    p.start()
+        p = multiprocessing.Process(target=classify, args=(vectorizer_t,
+                                                           classifier_t,
+                                                           10000,
+                                                           "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
+                                                           reads_names,
+                                                           trinity_test_set))
+        process_list.append(p)
+        p.start()
 
-    test_list = list(operator.xor(set(reads_seq), set(class_good_oases)))
+        test_list = list(operator.xor(set(reads_seq), set(class_good_oases)))
 
-    p = multiprocessing.Process(target=classify, args=(vectorizer_o,
-                                                       classifier_o,
-                                                       10000,
-                                                       "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
-                                                       reads_names,
-                                                       test_list[0:10000]))
-    process_list.append(p)
-    p.start()
+        p = multiprocessing.Process(target=classify, args=(vectorizer_o,
+                                                           classifier_o,
+                                                           10000,
+                                                           "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
+                                                           reads_names,
+                                                           test_list[0:10000]))
+        process_list.append(p)
+        p.start()
 
-    test_list = list(operator.xor(set(reads_seq), set(class_good_trinity)))
-    p = multiprocessing.Process(target=classify, args=(vectorizer_t,
-                                                       classifier_t,
-                                                       10000,
-                                                       "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
-                                                       reads_names,
-                                                       test_list[0:10000]))
-    process_list.append(p)
-    p.start()
+        test_list = list(operator.xor(set(reads_seq), set(class_good_trinity)))
+        p = multiprocessing.Process(target=classify, args=(vectorizer_t,
+                                                           classifier_t,
+                                                           10000,
+                                                           "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
+                                                           reads_names,
+                                                           test_list[0:10000]))
+        process_list.append(p)
+        p.start()
 
-    for p in process_list:
-        p.join()
+        for p in process_list:
+            p.join()
+    else:
+        classify(vectorizer_o,
+                 classifier_o,
+                 10000,
+                 "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(
+                     kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
+                 reads_names,
+                 oases_test_set)
+
+        classify(vectorizer_t,
+                 classifier_t,
+                 10000,
+                 "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-fit",
+                 reads_names,
+                 trinity_test_set)
+
+        test_list = list(operator.xor(set(reads_seq), set(class_good_oases)))
+        classify(vectorizer_o,
+                 classifier_o,
+                 10000,
+                 "validation/oases_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
+                 reads_names,
+                 test_list[0:10000])
+
+        test_list = list(operator.xor(set(reads_seq), set(class_good_trinity)))
+        classify(vectorizer_t,
+                 classifier_t,
+                 10000,
+                 "validation/trinity_classified-" + str(ngram) + "-" + kernel.keys()[0] + "-" + str(kernel[kernel.keys()[0]]) + "-" + fileout_suffix + "-must-not-fit",
+                 reads_names,
+                 test_list[0:10000])
 
 
 def launch_classification_threads(class_good_oases,
@@ -100,7 +136,7 @@ def launch_classification_threads(class_good_oases,
                                   reads_seq,
                                   purpose,
                                   fileout_suffix,
-                                  is_threaded=True):
+                                  is_threaded=False):
     target = None
 
     if purpose == "real-life":
@@ -111,25 +147,37 @@ def launch_classification_threads(class_good_oases,
         target = validation_cycle
 
 #    for ngram in [2, 3, 4, 5, 6, 7, 8]:
-    kernels = [{'svc': 'rbf'}, {'svc': 'poly'}, {'svc': 'sigmoid'}, {'rfc': 2}, {'rfc': 4}, {'rfc': 10}, {'rfc': 100}, {'rfc': 200}, {'rfc': 1000}]
+#    kernels = [{'svc': 'rbf'}, {'svc': 'poly'}, {'svc': 'sigmoid'}, {'rfc': 2}, {'rfc': 4}, {'rfc': 10}, {'rfc': 100}, {'rfc': 200}, {'rfc': 1000}]
+    kernels = [{'rfc': 1000}]
+#    kernels = [{'svc': 'poly', 'count': 3},
+#               {'svc': 'poly', 'count': 4},
+#               {'svc': 'poly', 'count': 5},
+#               {'svc': 'poly', 'count': 6},
+#               {'svc': 'poly', 'count': 7},
+#               {'svc': 'poly', 'count': 8}]
+#    kernels = [{'lp': ''}]
+#    kernels = [{'oneclasssvm': ''}]
+#    kernels = [{'covariance': ''}]
 
-    if is_threaded:
-        for kernel in kernels:
-            for ngram in [2, 3, 4, 5, 6, 7, 8]:
-                target(kernel,
-                       ngram,
-                       class_good_oases,
-                       class_good_trinity,
-                       reads_names,
-                       reads_seq,
-                       fileout_suffix)
+    for kernel in kernels:
+        for ngram in [6]:
+            target(kernel,
+                   ngram,
+                   class_good_oases,
+                   class_good_trinity,
+                   reads_names,
+                   reads_seq,
+                   fileout_suffix,
+                   is_threaded)
+
 
 
 def main():
-    compute_for_real = False
-    validate = True
-    for bottom_bound in [0.3, 0.4, 0.5, 0.6]:
-        for top_bound in [0.99, 0.95, 0.9]:
+    compute_for_real = True
+    validate = False
+    for bottom_bound in [0.3]:
+        #for top_bound in [0.99, 0.95, 0.9]:
+        for top_bound in [0.9]:
             fileout_suffix = "-" + str(bottom_bound) + "-" + str(top_bound) + "-"
 
             (reads_names, reads_seq) = get_reads("data/ag_1_GGCTAC_filtered.fastq")
